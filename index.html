@@ -1162,6 +1162,7 @@ Structure en texte brut, sans Markdown :
   aiBusy=true;aiBusyAgent='Direction';aiOk=false;aiText='Rédaction en cours…';render();
   const run={id:uid(),at:nowISO(),agent:'Direction',kind:'compte-rendu',mode:db.ai.status,count:b.count,excluded:b.excluded,colls:b.colls,pseudo:db.ai.data.pseudo,hash:await sha256(JSON.stringify(msgs)),ok:false,propositions:[],manquantes:[],synthese:'',limites:'',provider:'',model:'',error:''};
   try{
+    if(!run.hash)throw Error('Empreinte SHA-256 indisponible : envoi bloqué.');
     const r=await callChain(msgs);
     aiText=b.ps.back(r.text).replace(/\*\*|^#+\s?|`/gm,'').trim().slice(0,4800);aiOk=!!aiText;
     Object.assign(run,{ok:true,provider:r.provider,model:r.model,synthese:aiText,error:r.errors.length?'Repli après : '+r.errors.join(' ; '):''});
@@ -1188,7 +1189,7 @@ const Vault={keys:{},ck:null,salt:null,has:false,session:false,
   lock(){this.keys={};this.ck=null;this.salt=null;this.session=false},
   async forget(){this.lock();await Store.set('vault','');this.has=false},
 };
-async function sha256(s){try{const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch{return 'djb2-'+hash(s)}}
+async function sha256(s){try{const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch{return null}}
 
 /* ───────── IA gouvernée : contrôle d’accès ───────── */
 function readyProviders(){return db.ai.providers.filter(p=>p.on&&(p.id==='claude'?!!AI:!!Vault.keys[p.id]))}
@@ -1321,6 +1322,7 @@ async function aiRunAgent(agent){
   aiBusy=true;aiBusyAgent=agent;render();toast(`Analyse ${agent} en cours…`);
   const run={id:uid(),at:nowISO(),agent,kind:'analyse',mode:db.ai.status,count:b.count,excluded:b.excluded,colls:b.colls,pseudo:db.ai.data.pseudo,hash:await sha256(JSON.stringify(msgs)),ok:false,propositions:[],manquantes:[],synthese:'',limites:'',provider:'',model:'',error:''};
   try{
+    if(!run.hash)throw Error('Empreinte SHA-256 indisponible : envoi bloqué.');
     const r=await callChain(msgs),j=parseJSON(r.text),bk=b.ps.back;
     Object.assign(run,sanitizeRun({...run,ok:true,provider:r.provider,model:r.model,error:r.errors.length?'Repli après : '+r.errors.join(' ; '):'',synthese:bk(j.synthese),limites:bk(j.limites),manquantes:(Array.isArray(j.donnees_manquantes)?j.donnees_manquantes:[]).map(bk),propositions:(Array.isArray(j.propositions)?j.propositions:[]).slice(0,6).map(p=>({action:bk(p?.action),justification:bk(p?.justification),priorite:p?.priorite,preuve:bk(p?.preuve),exigence:bk(p?.exigence),ref:bk(p?.ref)}))}));
   }catch(e){run.error=String(e?.message||e).slice(0,400)}
@@ -1597,7 +1599,7 @@ function imprStats(){
   const spc=db.spc.map(r=>({r,c:spcCalc(r)})).filter(x=>!x.c.err);
   const cpk=spc.filter(x=>x.c.cpk!==null).sort((a,b)=>a.c.cpk-b.c.cpk)[0]||null;
   const msa=db.msa.map(r=>({r,c:msaCalc(r)})).filter(x=>!x.c.err);
-  const grr=msa.sort((a,b)=>(b.c.pTol??b.c.pGRR)-(a.c.pTol??a.c.pGRR))[0]||null;
+  const grr=msa.filter(x=>Number.isFinite(x.c.pTol??x.c.pGRR)&&x.c.verdict!=='Données insuffisantes'&&x.c.verdict!=='Étude à revoir').sort((a,b)=>(b.c.pTol??b.c.pGRR)-(a.c.pTol??a.c.pGRR))[0]||null;
   const oee=oeeAgg(db.oee);
   const ipr=db.fmea.filter(r=>OPEN_EXTRA.fmea(r)).map(r=>({r,v:iprOf(r)})).filter(x=>x.v!==null).sort((a,b)=>b.v-a.v);
   const zones=Object.entries(lastByZone()).map(([z,l])=>({z,last:l.at(-1),prev:l.at(-2),s:s5Of(l.at(-1)),p:l.at(-2)?s5Of(l.at(-2)):null}));
