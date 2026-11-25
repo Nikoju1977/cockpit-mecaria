@@ -10,7 +10,22 @@ Un cockpit de pilotage d'atelier d'usinage de précision : qualité, métrologie
 
 [English overview](#english-overview) · [Quickstart](#quickstart--démarrage-rapide) · [Issues](https://github.com/Nikoju1977/cockpit-mecaria/issues)
 
-> [Insérer ici un GIF de démonstration / Insert demo GIF here]
+## Qualification industrielle — cas de référence proposés
+
+**Périmètre : aide au pilotage et démonstration, non système de libération de produit.** Les cas synthétiques suivants sont des attentes à vérifier indépendamment, et non des tests exécutés dans cette révision.
+
+| Contrôle | Données / critère de référence |
+| --- | --- |
+| TRS nominal | Ouverture 480 min, arrêts 60 min, cycle 60 s, 400 pièces dont 380 bonnes : disponibilité 87,5 %, performance 95,24 %, qualité 95 %, TRS 79,17 % |
+| TRS incohérent | Quantité bonne supérieure à la quantité produite, durée négative ou arrêts supérieurs à l'ouverture : rejeter ou signaler explicitement, ne pas publier un KPI trompeur |
+| MSP | Vérifier I-MR et X-bar/R sur un jeu indépendant, avec constantes et tailles de sous-groupes documentées ; analyser la stabilité avant capabilité |
+| R&R | Refuser une grille incomplète ; comparer EV, AV, GRR, PV, TV et ndc à un calcul indépendant de même méthode |
+| Gouvernance IA | Vérifier désactivation, échéance de décision, exclusions et confirmation avec données fictives ; aucune donnée classifiée ou réelle |
+| Intégrité | Une empreinte `djb2-` ne doit pas satisfaire un contrôle SHA-256 ; journal local et identité déclarative insuffisants pour une preuve d'audit |
+
+Le code actuel de TRS ne rejette pas explicitement toutes les incohérences de quantité et de durée. Les protections d'accès du navigateur ne remplacent pas les autorisations serveur. La qualification doit couvrir les unités, données manquantes, sauvegardes, identité, audit et validation humaine. Les références normatives existantes sont conservées sans nouvel examen de leur applicabilité.
+
+**English:** Proposed synthetic checks cover OEE, SPC, gauge R&R, AI governance and record integrity. No tests were run. Invalid data must be rejected before KPI publication, and local roles, logs and hashes must not be treated as authenticated industrial evidence.
 
 > **Prototype non qualifié.** Inspection statique du code uniquement : aucun nouveau test d'exécution, audit de sécurité, benchmark, test physique, validation industrielle ou clinique n'a été effectué pour cette révision. Utiliser des données synthétiques.
 
