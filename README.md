@@ -10,6 +10,18 @@ Un cockpit de pilotage d'atelier d'usinage de précision : qualité, métrologie
 
 [English overview](#english-overview) · [Quickstart](#quickstart--démarrage-rapide) · [Issues](https://github.com/Nikoju1977/cockpit-mecaria/issues)
 
+## Fiabilisation fonctionnelle — 25 novembre 2026
+
+[Correctif des moteurs](https://github.com/Nikoju1977/cockpit-mecaria/commit/2ac451b1bf9e6a5a51ba88253b24a348211e0fbc) · [Gouvernance IA et indicateurs](https://github.com/Nikoju1977/cockpit-mecaria/commit/a39b35c9087901419a1058485a44a719310a7160).
+
+- TRS : validation stricte des cinq entrées, quantités entières, cohérence des temps et de la cadence ; aucun TRS global si un relevé est invalide. Arrêt complet ou production nulle valides avec TRS nul ; ratios indéfinis non inventés. Agrégation pondérée par le temps de cycle.
+- MSP : limites de spécification ordonnées, taille entière des sous-groupes, détection des étendues sous LCL, blocage de la capabilité si moins de 20 sous-groupes, signal de cause spéciale ou dispersion nulle. Ce seuil est une règle interne prudente, non une preuve de stabilité ou une exigence normative universelle.
+- R&R : grille de dimensions exactes, tolérance positive si renseignée, valeurs finies, verdict prudent pour dispersion nulle, étendues anormales ou ndc insuffisant. Les constantes et la méthode moyennes-étendues ne sont pas requalifiées.
+- IA : aucun envoi si SHA-256 indisponible ; retrait du repli non cryptographique. Les anciens historiques peuvent encore contenir des empreintes djb2.
+- 22 assertions JavaScript ont réussi sur le TRS, son agrégation et la validation numérique. Les modifications MSP/R&R et IA ont été relues dans la source publiée, sans exécution de leurs parcours ni validation indépendante.
+
+Les descriptions historiques ci-dessous peuvent mentionner des défauts désormais corrigés. Tests navigateur, calculs SPC/R&R indépendants, gouvernance IA en exécution, stockage métier, contrôle des accès, passerelles et déploiement restent à qualifier. Données fictives uniquement ; aucune certification ni libération industrielle.
+
 ## Qualification industrielle — cas de référence proposés
 
 **Périmètre : aide au pilotage et démonstration, non système de libération de produit.** Les cas synthétiques suivants sont des attentes à vérifier indépendamment, et non des tests exécutés dans cette révision.
@@ -23,7 +35,7 @@ Un cockpit de pilotage d'atelier d'usinage de précision : qualité, métrologie
 | Gouvernance IA | Vérifier désactivation, échéance de décision, exclusions et confirmation avec données fictives ; aucune donnée classifiée ou réelle |
 | Intégrité | Une empreinte `djb2-` ne doit pas satisfaire un contrôle SHA-256 ; journal local et identité déclarative insuffisants pour une preuve d'audit |
 
-Le code actuel de TRS ne rejette pas explicitement toutes les incohérences de quantité et de durée. Les protections d'accès du navigateur ne remplacent pas les autorisations serveur. La qualification doit couvrir les unités, données manquantes, sauvegardes, identité, audit et validation humaine. Les références normatives existantes sont conservées sans nouvel examen de leur applicabilité.
+Le code historique de TRS ne rejetait pas explicitement toutes les incohérences de quantité et de durée ; le correctif ci-dessus renforce cette validation. Les protections d'accès du navigateur ne remplacent pas les autorisations serveur. La qualification doit couvrir les unités, données manquantes, sauvegardes, identité, audit et validation humaine. Les références normatives existantes sont conservées sans nouvel examen de leur applicabilité.
 
 **English:** Proposed synthetic checks cover OEE, SPC, gauge R&R, AI governance and record integrity. No tests were run. Invalid data must be rejected before KPI publication, and local roles, logs and hashes must not be treated as authenticated industrial evidence.
 
@@ -72,7 +84,7 @@ flowchart TD
 
 - Le rôle est déclaratif, pas une authentification. IndexedDB stocke les fiches en clair avec repli mémoire ; sauvegardes JSON en clair. Le journal local est modifiable et tronqué à 2 000 entrées ; les analyses IA à 200. Ni WORM ni journal immuable.
 - Le coffre de clés utilise Web Crypto, AES-GCM 256 bits, PBKDF2-SHA-256 (310 000 itérations), sel et IV. Les clés sont déchiffrées en mémoire après ouverture du coffre ; le mécanisme ne chiffre pas les données métier et ne protège pas contre un script hostile exécuté dans la page.
-- `sha256` calcule l'empreinte des messages IA, mais peut retourner un préfixe `djb2-` suivi d'un hachage non cryptographique en cas d'échec Web Crypto. Ce repli ne doit jamais être traité comme une preuve SHA-256 ou une signature.
+- `sha256` calcule l'empreinte des messages IA, et le correctif bloque désormais l'envoi en cas d'échec Web Crypto ; les anciens historiques peuvent contenir un préfixe `djb2-`. Ce repli ne doit jamais être traité comme une preuve SHA-256 ou une signature.
 - `aiGate`, `buildPayload` et `confirmSend` contrôlent l'activation et le réexamen, excluent certaines classifications, pseudonymisent selon réglage et affichent la charge envoyée avant confirmation. Pseudonymisation ≠ anonymisation ; le texte libre peut contenir des secrets. Les fournisseurs externes reçoivent des données si l'utilisateur confirme. Ne pas utiliser de données clients, défense, export contrôlé ou personnelles réelles dans ce prototype sans qualification et autorisation.
 - Le code permet d'enregistrer une décision humaine sur les propositions ; le décideur est déclaré, non authentifié. Les passerelles ERP/CNC et la production réseau ne sont pas validées. Google Fonts est une ressource externe ; aucune dépendance à installer pour l'interface ne signifie pas zéro réseau.
 
