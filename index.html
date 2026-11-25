@@ -1519,7 +1519,7 @@ const f2=(v,d=2)=>v===null||v===undefined||!isFinite(v)?'—':fmtNum(v,d);
 const pct=(v,d=1)=>v===null||v===undefined||!isFinite(v)?'—':fmtNum(v*100,d)+' %';
 const memo=new Map();
 function cached(key,fn){if(memo.has(key))return memo.get(key);const v=fn();if(memo.size>400)memo.clear();memo.set(key,v);return v}
-const parseVals=s=>String(s||'').trim().split(/[\s;]+/).filter(Boolean).map(v=>/^[-+]?\d*[.,]?\d+(?:e[-+]?\d+)?$/i.test(v)?Number(v.replace(',','.')):NaN);
+const parseVals=s=>String(s??'').trim().split(/[\s;]+/).filter(Boolean).map(v=>strictMetric(v)??NaN);
 // Constantes des cartes X̄-R : n → [A2, D3, D4, d2]
 const SPC_K={2:[1.880,0,3.267,1.128],3:[1.023,0,2.574,1.693],4:[0.729,0,2.282,2.059],5:[0.577,0,2.114,2.326],6:[0.483,0,2.004,2.534],7:[0.419,0.076,1.924,2.704],8:[0.373,0.136,1.864,2.847],9:[0.337,0.184,1.816,2.970],10:[0.308,0.223,1.777,3.078]};
 const RULES={R1:'Point hors limites de contrôle',R2:'7 points consécutifs du même côté de la moyenne',R3:'7 points consécutifs en croissance ou en décroissance',R4:'2 points sur 3 au-delà de 2 σ du même côté',R5:'Dispersion (étendue) hors limite de contrôle'};
@@ -1545,7 +1545,7 @@ function spcCompute(r){
     if(x>UCL||x<LCL)flags[i].add('R1');
     const s=x>CL?1:x<CL?-1:0;run=s&&s===side?run+1:s?1:0;side=s;if(run>=7)for(let j=i-6;j<=i;j++)flags[j].add('R2');
     if(i>0){const d=x>pts[i-1]?1:x<pts[i-1]?-1:0;inc=d&&d===dir?inc+1:d?1:0;dir=d;if(inc>=6)for(let j=i-6;j<=i;j++)flags[j].add('R3')}
-    if(i>=2&&sig>0){const w=pts.slice(i-2,i+1);for(const sd of [1,-1]){const c=w.filter(v=>sd*(v-CL)>2*sig).length;if(c>=2&&sd*(x-CL)>2*sig)w.forEach((v,j)=>{if(sd*(v-CL)>2*sig)flags[i-2+j].add('R4')})}}
+    if(i>=2&&sig>0){const w=pts.slice(i-2,i+1);for(const sd of [1,-1]){const c=w.filter(v=>sd*(v-CL)>2*sig).length;if(c>=2)w.forEach((v,j)=>{if(sd*(v-CL)>2*sig)flags[i-2+j].add('R4')})}}
   });
   const rflags=rng.map(v=>v!==null&&(v>RUCL||v<RLCL)?new Set(['R5']):new Set());
   const signals={};flags.forEach((f,i)=>f.forEach(k=>(signals[k]??=[]).push(i+1)));rflags.forEach((f,i)=>f.forEach(k=>(signals[k]??=[]).push(i+1)));
@@ -1553,18 +1553,18 @@ function spcCompute(r){
   const one=(s,side)=>s>0?(side==='u'?(usl-mean)/(3*s):(mean-lsl)/(3*s)):null;
   const both=lsl!==null&&usl!==null&&usl>lsl;
   const cap=s=>{if(!s||s<=0)return [null,null];const cp=both?(usl-lsl)/(6*s):null;const ks=[usl!==null?one(s,'u'):null,lsl!==null?one(s,'l'):null].filter(v=>v!==null);return [cp,ks.length?Math.min(...ks):null]};
-  if(![mean,sdo,sw,CL,UCL,LCL,RCL,RUCL,RLCL].every(Number.isFinite))return {err:'Calcul numérique hors plage.'};const eligible=groups.length>=20&&Object.keys(signals).length===0&&sw>0&&sdo>0;const [cp,cpk]=eligible?cap(sw):[null,null],[pp,ppk]=eligible?cap(sdo):[null,null];
+  if(![mean,sdo,sw,CL,UCL,LCL,RCL,RUCL,RLCL].every(Number.isFinite))return {err:'Calcul numérique hors plage.'};const eligible=groups.length>=20&&Object.keys(signals).length===0&&sw>0&&sdo>0;const finiteCap=s=>cap(s).map(v=>Number.isFinite(v)?v:null);const [cp,cpk]=eligible?finiteCap(sw):[null,null],[pp,ppk]=eligible?finiteCap(sdo):[null,null];
   const out=all.filter(v=>(lsl!==null&&v<lsl)||(usl!==null&&v>usl)).length;
   return {n,k:groups.length,N,all,mean,sdo,sw,pts,rng,CL,UCL,LCL,RCL,RUCL,RLCL,flags,rflags,signals,nsig:Object.keys(signals).length,eligible,lsl,usl,cp,cpk,pp,ppk,out,labels,tolBad:lsl!==null&&usl!==null&&usl<=lsl};
 }
 const MSA_K1={2:0.8862,3:0.5908},MSA_K2={2:0.7071,3:0.5231},MSA_K3={2:0.7071,3:0.5231,4:0.4467,5:0.4030,6:0.3742,7:0.3534,8:0.3375,9:0.3249,10:0.3146},MSA_D4={2:3.267,3:2.574};
-function msaDims(r){return {k:Math.min(3,Math.max(2,parseNum(r.ops)||3)),n:Math.min(10,Math.max(2,parseNum(r.parts)||10)),t:Math.min(3,Math.max(2,parseNum(r.trials)||3))}}
+function msaDims(r){const dim=(v,max)=>{const x=strictMetric(v);return Number.isInteger(x)&&x>=2&&x<=max?x:max;};return {k:dim(r.ops,3),n:dim(r.parts,10),t:dim(r.trials,3)}}
 function msaGrid(r){
   const {k,n,t}=msaDims(r);let src=[];try{const j=JSON.parse(r.grid||'[]');if(Array.isArray(j))src=j}catch{}
   return Array.from({length:k},(_,o)=>Array.from({length:n},(_,p)=>Array.from({length:t},(_,j)=>{const v=src?.[o]?.[p]?.[j];return typeof v==='number'&&isFinite(v)?v:null})));
 }
 const msaOps=r=>{const {k}=msaDims(r);const names=String(r.opNames||'').split(/[,;]/).map(s=>s.trim()).filter(Boolean);return Array.from({length:k},(_,i)=>names[i]||'ABC'[i])};
-function msaCalc(r){return cached('msa|'+[r.ops,r.parts,r.trials,r.tol,r.grid].join('|'),()=>msaCompute(r))}
+function msaCalc(r){return cached('msa|'+JSON.stringify([r.ops,r.parts,r.trials,r.tol,r.grid,r.opNames,db.meta.targets.grr]),()=>msaCompute(r))}
 function msaCompute(r){
   const [k,n,t]=[r.ops,r.parts,r.trials].map(strictMetric);if(![k,n,t].every(Number.isInteger)||k<2||k>3||n<2||n>10||t<2||t>3)return {err:'Dimensions R&R invalides.',filled:0,total:0};let raw;try{raw=JSON.parse(r.grid||'[]')}catch{return {err:'Grille R&R illisible.',filled:0,total:k*n*t}}if(!Array.isArray(raw)||raw.length!==k||raw.some(op=>!Array.isArray(op)||op.length!==n||op.some(p=>!Array.isArray(p)||p.length!==t)))return {err:'Dimensions de grille incohérentes.',filled:0,total:k*n*t};const g=msaGrid(r),flat=g.flat(2),filled=flat.filter(v=>v!==null).length,total=k*n*t;
   if(filled<total)return {err:`${total-filled} mesure${total-filled>1?'s':''} manquante${total-filled>1?'s':''} sur ${total}.`,filled,total};
@@ -1576,21 +1576,21 @@ function msaCompute(r){
   const tol=strictMetric(r.tol),uclR=MSA_D4[t]*RR;if((String(r.tol??'').trim()&&(tol===null||tol<=0))||![EV,AV,GRR,PV,TV,uclR].every(Number.isFinite))return {err:'Tolérance ou calcul R&R invalide.',filled,total};
   const outR=[];ranges.forEach((op,o)=>op.forEach((v,p)=>{if(RR>0&&v>uclR)outR.push(`${msaOps(r)[o]}, pièce ${p+1}`)}));
   const pGRR=TV>0?GRR/TV*100:null,pTol=tol>0?6*GRR/tol*100:null,ndc=GRR>0?Math.floor(1.41*PV/GRR):null;
-  const ref=pTol??pGRR,T=db.meta.targets.grr;
+  const ref=pTol??pGRR,T=strictMetric(db.meta.targets.grr);if(T===null||T<0||T>30||[pGRR,pTol,ndc].some(v=>v!==null&&!Number.isFinite(v)))return {err:'Seuil ou indicateur R&R invalide.',filled,total};
   const verdict=TV<=0||GRR<=0||ref===null?'Données insuffisantes':outR.length?'Étude à revoir':ndc!==null&&ndc<5?'Non acceptable':ref<=T?'Acceptable':ref<=30?'Sous conditions':'Non acceptable';
   return {filled,total,Rbar,Xbar,RR,Xdiff,Rp,EV,AV,GRR,PV,TV,pEV:TV?EV/TV*100:null,pAV:TV?AV/TV*100:null,pGRR,pPV:TV?PV/TV*100:null,pTol,ndc,uclR,outR,verdict,partMeans};
 }
-function strictMetric(v){if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:e[+-]?\d+)?$/i.test(v.trim()))return null;const n=Number(v.trim().replace(",","."));return Number.isFinite(n)?n:null;}
+function strictMetric(v){if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:e[+-]?\d+)?$/i.test(v.trim()))return null;const s=v.trim().replace(",","."),n=Number(s);return Number.isFinite(n)&&!(n===0&&/[1-9]/.test(s.split(/e/i)[0]))?n:null;}
 function oeeCalc(r){
  const [o,s,c,p,q]=["opening","stops","cycle","produced","good"].map(k=>strictMetric(r[k]));
  const fail=err=>({err,D:null,P:null,Q:null,trs:null});
  if([o,s,c,p,q].some(v=>v===null)||o<=0||s<0||s>o||c<=0||!Number.isSafeInteger(p)||!Number.isSafeInteger(q)||p<0||q<0||q>p)return fail("Durées, cycle ou quantités invalides.");
  const run=o-s,load=p*c/60,goodT=q*c/60;
- if(!Number.isFinite(load)||!Number.isFinite(goodT)||load>run+Number.EPSILON*Math.max(1,run)*8)return fail("Cadence théorique incohérente avec le temps de fonctionnement.");
+ if(!Number.isFinite(load)||!Number.isFinite(goodT)||(run===0&&p>0)||(p>0&&load===0)||(q>0&&goodT===0)||load>run+Number.EPSILON*run*8)return fail("Cadence théorique incohérente avec le temps de fonctionnement.");
  const D=run/o,P=run>0?Math.min(1,load/run):null,Q=p>0?q/p:null;
- return {o,s,run,c,p,q,D,P,Q,trs:goodT/o,load,goodT};
+ return {o,s,run,c,p,q,D,P,Q,trs:Math.min(1,goodT/o),load,goodT};
 }
-function oeeAgg(rows){if(!rows.length)return null;const c=rows.map(oeeCalc);if(c.some(x=>x.err))return null;const S=k=>c.reduce((s,x)=>s+x[k],0),o=S("o"),run=S("run"),load=S("load"),goodT=S("goodT");if(![o,run,load,goodT].every(Number.isFinite))return null;return {n:c.length,D:run/o,P:run>0?load/run:null,Q:load>0?goodT/load:null,trs:goodT/o,stops:S("s")};}
+function oeeAgg(rows){if(!rows.length)return null;const c=rows.map(oeeCalc);if(c.some(x=>x.err))return null;const S=k=>c.reduce((s,x)=>s+x[k],0),o=S("o"),run=S("run"),load=S("load"),goodT=S("goodT");if(![o,run,load,goodT].every(Number.isFinite))return null;return {n:c.length,D:run/o,P:run>0?Math.min(1,load/run):null,Q:load>0?Math.min(1,goodT/load):null,trs:Math.min(1,goodT/o),stops:S("s")};}
 const iprOf=(r,s='')=>{const g=parseNum(r['g'+s]),o=parseNum(r['o'+s]),d=parseNum(r['d'+s]);return g&&o&&d?g*o*d:null};
 const s5Of=r=>{const v=['s1','s2','s3','s4','s5'].map(k=>parseNum(r[k]));return v.every(x=>x!==null)?v.reduce((a,b)=>a+b,0)/25*100:null};
 function lastByZone(){const m={};[...db.s5].sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(r=>{(m[r.zone]??=[]).push(r)});return m}
