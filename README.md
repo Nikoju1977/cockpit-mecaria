@@ -157,3 +157,10 @@ No new runtime, security, clinical or industrial validation was performed during
 ## Licence & auteur / License & author
 
 **© 2026 Studio Niko Design — [Nikoju1977](https://github.com/Nikoju1977).** [Notice de droits / Copyright notice](LICENSE.md) : tous droits réservés pour les contributions originales concernées ; l'accès public au code ne constitue pas une licence open source. Les composants tiers conservent leurs licences propres. Aucun fichier de licence n'a été modifié.
+
+
+## Qualification des moteurs qualité — 25 novembre 2026
+
+[Correctif des moteurs](https://github.com/Nikoju1977/cockpit-mecaria/commit/a07a9fbe7dbe497ac952f9c93d0e00f133ef2f57) : refus des sous-dépassements non nuls lors de la lecture des nombres et des temps de production non représentables ; TRS borné pour les seuls écarts d'arrondi tolérés. Les cartes SPC utilisent le parseur numérique strict, la règle R4 examine les fenêtres de trois points et les indices non finis ne sont plus affichés. Les dimensions R&R utilisent la même validation numérique que le calcul ; le cache inclut le seuil R&R et les noms d'opérateurs. Seuil R&R interne accepté entre 0 et 30 %, sinon étude non évaluée.
+
+[Tests des fonctions de production](tests/quality-motors.test.cjs) : exécution locale `node tests/quality-motors.test.cjs` depuis la racine, sans dépendance externe. Cas de référence TRS et agrégation pondérée par temps de cycle, cartes Xbar-R et I-MR, limites, Cp/Cpk/Pp/Ppk, méthode R&R moyennes-étendues, seuil modifié, données manquantes et dégénérées. [CI dédiée dans le workflow existant](https://github.com/Nikoju1977/cockpit-mecaria/actions/runs/45706271309) : résultat à vérifier. Ce test exerce les fonctions extraites de l'HTML, pas le DOM ni la persistance IndexedDB. Il ne démontre ni normalité, ni indépendance, ni représentativité des mesures, ni certification industrielle. Les règles et seuils doivent être approuvés pour chaque processus réel.
