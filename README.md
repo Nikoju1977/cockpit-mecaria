@@ -1,4 +1,84 @@
-# Cockpit MECARIA
+# Cockpit MECARIA — Studio Niko Design
+
+**Local-first industrial quality cockpit with statistical process tools and human-governed AI proposals.**
+
+Un cockpit de pilotage d'atelier d'usinage de précision : qualité, métrologie, production, amélioration continue et gouvernance des analyses IA.
+
+![UI](https://img.shields.io/badge/UI-Vanilla_JS-F7DF1E) ![Storage](https://img.shields.io/badge/Storage-IndexedDB-00897B) ![Key_vault](https://img.shields.io/badge/Key_vault-AES--256--GCM-326CE5) ![Status](https://img.shields.io/badge/Status-prototype-orange) ![License](https://img.shields.io/badge/License-restricted-lightgrey)
+
+**STUDIO NIKO DESIGN** · Build smart. Stay lightweight. Create without limits.
+
+[English overview](#english-overview) · [Quickstart](#quickstart--démarrage-rapide) · [Issues](https://github.com/Nikoju1977/cockpit-mecaria/issues)
+
+> [Insérer ici un GIF de démonstration / Insert demo GIF here]
+
+> **Prototype non qualifié.** Inspection statique du code uniquement : aucun nouveau test d'exécution, audit de sécurité, benchmark, test physique, validation industrielle ou clinique n'a été effectué pour cette révision. Utiliser des données synthétiques.
+
+## Pourquoi ce projet ?
+
+Relier les fiches métier, indicateurs et actions dans un seul espace de pilotage sans déploiement serveur obligatoire. Les calculs statistiques sont déterministes ; l'IA reste une option soumise à une décision d'activation et à une validation humaine. Cette séparation évite de confondre suggestions et décisions qualité.
+
+## Fonctionnalités clés
+
+- 📋 Registres qualité, non-conformités, audits, matrice exigences/preuves, SAV et actions.
+- 📏 Gestion des moyens de mesure, échéances, MSP/SPC et R&R.
+- 📊 Capabilité Cp/Cpk/Pp/Ppk, TRS et outils d'amélioration (Pareto, Ishikawa, AMDEC, 5S, PDCA, DMAIC).
+- 🔗 Registres ERP et liaisons machines en lecture seule via passerelles à qualifier, pas de pilotage CNC démontré.
+- 🔐 Coffre de clés chiffré, journal local, export CSV et sauvegarde/restauration JSON.
+- 🧠 IA facultative : contrôles d'activation, exclusions de classification, aperçu de la charge envoyée, propositions soumises à décision humaine.
+
+## Architecture & sécurité
+
+```mermaid
+flowchart TD
+  A[Business records] --> B[IndexedDB / memory fallback]
+  B --> C[Deterministic SPC / MSA / OEE]
+  C --> D[Dashboard and management review]
+  B --> E[Classification and payload filtering]
+  E --> F[Human send confirmation]
+  G[Encrypted API key vault] --> H[Authorized provider]
+  F --> H
+  H --> I[Proposals]
+  I --> J[Human decision]
+  J --> B
+  B --> K[Local logs and JSON / CSV]
+```
+
+### Moteurs déterministes inspectés
+
+| Fonction | Méthode et limite |
+| --- | --- |
+| `spcCompute` | I-MR pour n=1 (étendue mobile / 1,128) ; X-bar/R pour n=2–10 (constantes A2, D3, D4, d2). Signaux de dérive, hors limites et étendues ; pas de qualification statistique indépendante. |
+| Capabilité | Cp = (USL − LSL)/(6 sigma) ; Cpk par distance minimale aux limites / (3 sigma). Pp/Ppk utilisent l'écart-type global d'échantillon. Une capabilité n'est interprétable qu'après validation de la stabilité, du modèle et du système de mesure. |
+| `msaCompute` | Méthode moyennes-étendues : EV, AV, GRR, PV, TV, %R&R, %tolérance et ndc. Grille 2–3 opérateurs, 2–10 pièces, 2–3 essais. Pas de modèle ANOVA. |
+| `oeeCalc` | TRS = disponibilité × performance × qualité à partir du temps d'ouverture, arrêts, cycle et quantités. Vérifier unités, cohérence des données et ratios aberrants avant interprétation. |
+
+### Sécurité et traçabilité
+
+- Le rôle est déclaratif, pas une authentification. IndexedDB stocke les fiches en clair avec repli mémoire ; sauvegardes JSON en clair. Le journal local est modifiable et tronqué à 2 000 entrées ; les analyses IA à 200. Ni WORM ni journal immuable.
+- Le coffre de clés utilise Web Crypto, AES-GCM 256 bits, PBKDF2-SHA-256 (310 000 itérations), sel et IV. Les clés sont déchiffrées en mémoire après ouverture du coffre ; le mécanisme ne chiffre pas les données métier et ne protège pas contre un script hostile exécuté dans la page.
+- `sha256` calcule l'empreinte des messages IA, mais peut retourner un préfixe `djb2-` suivi d'un hachage non cryptographique en cas d'échec Web Crypto. Ce repli ne doit jamais être traité comme une preuve SHA-256 ou une signature.
+- `aiGate`, `buildPayload` et `confirmSend` contrôlent l'activation et le réexamen, excluent certaines classifications, pseudonymisent selon réglage et affichent la charge envoyée avant confirmation. Pseudonymisation ≠ anonymisation ; le texte libre peut contenir des secrets. Les fournisseurs externes reçoivent des données si l'utilisateur confirme. Ne pas utiliser de données clients, défense, export contrôlé ou personnelles réelles dans ce prototype sans qualification et autorisation.
+- Le code permet d'enregistrer une décision humaine sur les propositions ; le décideur est déclaré, non authentifié. Les passerelles ERP/CNC et la production réseau ne sont pas validées. Google Fonts est une ressource externe ; aucune dépendance à installer pour l'interface ne signifie pas zéro réseau.
+
+## Référentiels et limites de conformité
+
+| Cadre | Fonction visée, non preuve de conformité |
+| --- | --- |
+| ISO 9001, EN 9100 | Matrice exigences/preuves, NC, revue de direction, actions et traçabilité à qualifier. |
+| [ISO 10012:2026](https://www.iso.org/standard/10012) | Management de la mesure et moyens de contrôle. |
+| ISO/IEC 27001, ISO/IEC 42001 | Gouvernance de la sécurité et de l'IA ; contrôle organisationnel à démontrer. |
+| RGPD, AI Act, contrôle des exportations | Applicabilité, minimisation, sous-traitance, analyse des risques et autorisations à qualifier. |
+
+Aucune certification ISO, conformité réglementaire ou audit indépendant n'est revendiqué. Les méthodes R&R et MSP doivent être validées sur des cas de référence et les exigences des clients avant usage industriel.
+
+## Quickstart / Démarrage rapide
+
+Lancer `python3 -m http.server 8000` à la racine, ouvrir http://localhost:8000/ ; utiliser un contexte sécurisé pour le coffre Web Crypto. Démarrer avec des fiches fictives, tester les calculs et exporter une sauvegarde JSON. Laisser l'IA désactivée pendant les premiers essais. Ne pas renseigner de secrets ou d'informations industrielles réelles dans un dépôt public.
+
+## Documentation technique historique
+
+Les informations antérieures ci-dessous sont conservées pour le contexte ; les constats de l'inspection statique et les limites explicites ci-dessus priment sur toute formulation historique trop générale.
 
 Cockpit de direction de site pour un atelier d'usinage de précision : qualité, métrologie, production, flux, SAV, amélioration continue et IA gouvernée. Application web en un seul fichier (`index.html`), sans serveur ni dépendance à installer.
 
@@ -29,3 +109,24 @@ L'application ne vaut pas preuve de conformité sans validation par le système 
 
 ---
 Studio Niko Design
+
+## Roadmap & contribution
+
+Propositions non terminées :
+
+- [ ] Valider MSP, capabilité, R&R et TRS sur des jeux de référence indépendants, y compris cas limites.
+- [ ] Remplacer les rôles déclaratifs par une authentification et des autorisations serveur ; protéger données et journal.
+- [ ] Refuser toute empreinte de secours non cryptographique lorsqu'une preuve d'intégrité est exigée.
+- [ ] Tester les exclusions de données et les confirmations IA ; qualifier les fournisseurs et les passerelles en environnement contrôlé.
+
+**Première contribution / `good first issue` (label proposé, non créé ici) :** Proposer un jeu de mesures synthétiques SPC ou R&R avec résultats attendus et unités documentées. Les rapports reproductibles sont bienvenus dans les [issues](https://github.com/Nikoju1977/cockpit-mecaria/issues). Ne publier aucune donnée personnelle, industrielle, médicale ou confidentielle. Toute modification ou redistribution reste soumise aux droits existants.
+
+## English overview
+
+Cockpit MECARIA is a local-first industrial management prototype with quality records, measurement equipment, deterministic SPC/capability, average-range gauge R&R and OEE. Optional AI analysis is gated by a recorded decision and human confirmation. API keys are encrypted in a local AES-GCM/PBKDF2 vault, but business records and exports are not encrypted. Roles are declarative, logs are editable and bounded, and SHA-256 has a non-cryptographic fallback. No certification, industrial deployment or independent validation is claimed. Run the full HTML over localhost with synthetic data.
+
+No new runtime, security, clinical or industrial validation was performed during this documentation update. Feedback is welcome within the existing rights framework.
+
+## Licence & auteur / License & author
+
+**© 2026 Studio Niko Design — [Nikoju1977](https://github.com/Nikoju1977).** [Notice de droits / Copyright notice](LICENSE.md) : tous droits réservés pour les contributions originales concernées ; l'accès public au code ne constitue pas une licence open source. Les composants tiers conservent leurs licences propres. Aucun fichier de licence n'a été modifié.
